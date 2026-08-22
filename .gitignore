@@ -2,6 +2,9 @@
 .idea
 learnings.txt
 03_chatbot_UI/04_sqlite_db_chatbot/chatbot.db
+04_Langsmith/medical_store
+04_Langsmith/islr.pdf
+04_Langsmith/Medical_book.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
