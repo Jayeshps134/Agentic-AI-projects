@@ -5,6 +5,9 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
 from langgraph.checkpoint.sqlite import SqliteSaver
 import sqlite3
+from dotenv import load_dotenv
+load_dotenv()
+from langsmith import traceable
 
 # checkpointer
 conn = sqlite3.connect(database="chatbot.db", check_same_thread=False)
@@ -29,6 +32,7 @@ class ChatState(TypedDict):
 
 
 # chat node
+@traceable(name="chat_node")
 def chat_node(state: ChatState):
     model_response = chat_model.invoke(state["messages"])
     return {"messages": [model_response]}
