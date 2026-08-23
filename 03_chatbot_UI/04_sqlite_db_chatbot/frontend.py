@@ -1,12 +1,12 @@
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from langchain_core.messages import HumanMessage
 from backend import chatbot, retrieve_all_threads
 import streamlit as st
 import uuid
 from dotenv import load_dotenv
 import os
+
 load_dotenv()
-
-
+os.environ["LANGCHAIN_PROJECT"] = "Tool Based Chatbot"
 
 # Session states
 if "threads" not in st.session_state:
@@ -14,7 +14,6 @@ if "threads" not in st.session_state:
 
 if "current_thread" not in st.session_state:
     st.session_state["current_thread"] = None
-
 
 # Util functions
 def create_new_chat():
@@ -33,27 +32,45 @@ def load_chat_history(config):
                 st.write(message.content)
         elif message.type == "tool":
             continue
-        elif message.type == "ai" and isinstance(message.content,str) and message.content:
+        elif message.type == "ai" and len(message.content)>0:
             with st.chat_message("assistant"):
                 st.write(message.content)
 
 def stream_assistant_response(initial_state, config):
-    for message, metadata in chatbot.stream(input=initial_state, config=config, stream_mode="messages"):
-        if isinstance(message, ToolMessage):
+    for msg, metadata in chatbot.stream(
+        input=initial_state,
+        config=config,
+        stream_mode="messages"
+    ):
+
+
+
+        if metadata.get("langgraph_node") != "chat_node":
             continue
 
-        content = message.content
+        if getattr(msg, "tool_call_chunks", None):
+            continue
+
+        if getattr(msg, "tool_calls", None):
+            continue
+
+        content = msg.content
+
         if isinstance(content, str) and content:
             yield content
 
-
 # Sidebar
 st.sidebar.title("Chatbot")
-if (st.sidebar.button("New Chat") or st.session_state["current_thread"] is None):
+
+if (
+    st.sidebar.button("New Chat")
+    or st.session_state["current_thread"] is None
+):
     create_new_chat()
     st.rerun()
 
 st.sidebar.subheader("My Conversations")
+
 for thread in st.session_state["threads"]:
     if st.sidebar.button(str(thread), key=f"thread_{thread}"):
         st.session_state["current_thread"] = thread
@@ -71,13 +88,21 @@ load_chat_history(CONFIG)
 
 # User input
 user_input = st.chat_input("Type here...")
+
 if user_input:
     initial_state = {
         "messages": [
             HumanMessage(content=user_input)
         ]
     }
+
     with st.chat_message("user"):
         st.write(user_input)
+
     with st.chat_message("assistant"):
-        st.write_stream(stream_assistant_response(initial_state,CONFIG))
+        st.write_stream(
+            stream_assistant_response(
+                initial_state,
+                CONFIG
+            )
+        )
